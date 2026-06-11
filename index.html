@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>颗粒分析成果图表</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app-container">
+  <div class="top-banner no-print">
+    <h1>颗粒分析成果图表</h1>
+    <span>土工颗粒分析曲线 · 自动生成</span>
+  </div>
+  <div class="card no-print">
+    <div class="card-title">工程信息</div>
+    <div class="info-grid">
+      <div class="info-item"><label>工程名称</label><input id="projName" value="XXX工程"></div>
+      <div class="info-item"><label>试验单位</label><input id="unitName" value="XXX勘察设计院"></div>
+      <div class="info-item"><label>试验者</label><input id="tester" value="张三"></div>
+      <div class="info-item"><label>检查者</label><input id="checker" value="李四"></div>
+      <div class="info-item"><label>试验日期</label><input id="testDate" type="date"></div>
+      <div class="info-item"><label>样品编号</label><input id="sampleNo" value="TG2024-001"></div>
+    </div>
+  </div>
+  <div class="card no-print">
+    <div class="card-title">颗粒组成数据录入</div>
+    <div class="samples-actions">
+      <button class="btn btn-outline btn-sm" onclick="addSample()">+ 添加试样</button>
+      <button class="btn btn-orange btn-sm" onclick="saveData()">保存数据</button>
+      <button class="btn btn-outline btn-sm" onclick="loadSaved()">恢复数据</button>
+      <button class="btn btn-outline-red btn-sm" onclick="clearAll()">清空</button>
+      <button class="btn btn-outline btn-sm" onclick="openPasteModal()">📋 从Excel粘贴</button>
+    </div>
+    <div id="samplesContainer"></div>
+    <div id="errorMsg"></div>
+    <div class="main-actions">
+      <button class="btn btn-green" onclick="generateAll()">生成曲线</button>
+      <button class="btn btn-purple" onclick="showPrintPreview()">打印预览</button>
+    </div>
+  </div>
+  <div class="print-section" id="printSection"></div>
+
+  <div class="overlay" id="pasteModal">
+    <div class="overlay-box">
+      <h3>从Excel粘贴数据</h3>
+      <p class="info">在Excel中选中一行或多行数据（含表头则需包含试样名称列），按 <b>Ctrl+C</b> 复制，然后粘贴到下方文本框：<br><span style="color:#999">每行为一个试样，列顺序：试样名称 / 100~60 / 60~20 / 20~5 / 5~2 / 2~0.5 / 0.5~0.25 / 0.25~0.075 / 0.075~0.005 / &lt;0.005</span></p>
+      <textarea id="pasteArea" placeholder="示例：
+试样A	0	5	12	18	25	20	12	6	2
+试样B	0	2	8	15	28	24	14	7	2"></textarea>
+      <div class="overlay-actions">
+        <button class="btn btn-outline" onclick="closePasteModal()">取消</button>
+        <button class="btn btn-green" onclick="applyPasteData()">确认导入</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>

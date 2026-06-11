@@ -1,0 +1,629 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>颗粒分析成果图表</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"Microsoft YaHei","SimSun",Arial,sans-serif;background:#eef1f5;color:#222;font-size:15px}
+.app-container{max-width:1240px;margin:0 auto;padding:16px 18px}
+.top-banner{background:linear-gradient(135deg,#0a2a44,#1a4a74 50%,#2a6a9e);color:#fff;padding:20px 28px;border-radius:10px;margin-bottom:14px;text-align:center;box-shadow:0 3px 14px rgba(10,42,68,0.25)}
+.top-banner h1{font-size:28px;letter-spacing:5px;font-weight:700}
+.top-banner span{font-size:14px;opacity:.8;letter-spacing:1px;display:block;margin-top:2px}
+
+.card{background:#fff;border-radius:8px;box-shadow:0 1px 8px rgba(0,0,0,.07);padding:18px 20px;margin-bottom:14px}
+.card-title{font-size:16px;font-weight:700;color:#0a2a44;padding-bottom:8px;border-bottom:2px solid #e6eaef;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.card-title::before{content:'';width:3px;height:16px;background:#1a4a74;border-radius:2px}
+
+.info-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.info-item{display:flex;flex-direction:column}
+.info-item label{font-size:13px;color:#666;font-weight:600;margin-bottom:2px}
+.info-item input{padding:8px 10px;border:1.5px solid #d0d5dd;border-radius:5px;font-size:14px;outline:none}
+.info-item input:focus{border-color:#1a4a74;box-shadow:0 0 0 3px rgba(26,74,116,.1)}
+
+.sample-card{border:1.5px solid #dce1e8;border-radius:8px;padding:14px 16px;margin-bottom:14px;background:#fafbfc}
+.sample-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.sample-header .left{display:flex;align-items:center;gap:10px}
+.sample-header .left input[type=text]{font-size:16px;font-weight:700;border:none;background:transparent;color:#0a2a44;outline:none;width:180px;padding:2px 6px}
+.sample-header .left input[type=text]:focus{border-bottom:2px solid #1a4a74}
+.sample-header .left label{font-size:13px;display:flex;align-items:center;gap:4px;cursor:pointer;color:#666}
+.sample-header .left input[type=checkbox]{width:16px;height:16px;cursor:pointer}
+
+.sample-body{display:flex;gap:14px;align-items:stretch;flex-wrap:wrap}
+.sample-body .col-range{flex:0 0 290px;min-width:240px}
+.sample-body .col-pass{flex:0 0 230px;min-width:180px}
+.sample-body .col-chart{flex:1;min-width:360px;min-height:340px}
+.sample-body .col-chart .chart-instance{width:100%;height:340px;border-radius:6px;background:#fefefe;border:1px solid #e6eaef;padding:4px}
+
+.static-table{width:100%;border-collapse:collapse;font-size:14px}
+.static-table th{font-size:13px;color:#555;font-weight:600;padding:5px 4px;border-bottom:1.5px solid #d0d5dd;text-align:center;background:#f5f6f8}
+.static-table td{padding:3px;text-align:center;font-size:14px}
+.static-table td input{width:100%;border:1px solid transparent;background:transparent;text-align:center;font-size:14px;padding:4px 2px;border-radius:3px;outline:none}
+.static-table td input:focus{border-color:#1a4a74;background:#fff;box-shadow:0 0 0 2px rgba(26,74,116,.08)}
+.static-table td input:hover{background:#f0f2f5}
+.static-table .pass-val{font-weight:600;color:#0a2a44}
+.static-table .sum-row td{font-weight:700;background:#eef2f7;border-top:2px solid #d0d5dd}
+
+.deleted td{opacity:.35;text-decoration:line-through}
+.deleted td input{text-decoration:line-through;color:#aaa}
+.deleted td .pass-val{color:#aaa}
+
+.overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);z-index:1000;align-items:center;justify-content:center}
+.overlay.show{display:flex}
+.overlay-box{background:#fff;border-radius:10px;padding:22px 26px;width:640px;max-width:94%;box-shadow:0 8px 30px rgba(0,0,0,.15)}
+.overlay-box h3{font-size:17px;margin-bottom:6px;color:#0a2a44}
+.overlay-box p.info{font-size:13px;color:#666;margin-bottom:10px;line-height:1.6}
+.overlay-box textarea{width:100%;height:200px;border:1.5px solid #d0d5dd;border-radius:6px;padding:10px;font-size:13px;resize:vertical;font-family:"Microsoft YaHei",monospace;outline:none}
+.overlay-box textarea:focus{border-color:#1a4a74;box-shadow:0 0 0 3px rgba(26,74,116,.1)}
+.overlay-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+
+.indicator-box{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;padding:6px 8px;background:#f5f6f8;border-radius:5px;font-size:13px}
+.indicator-box span{padding:3px 12px;background:#fff;border-radius:4px;border:1px solid #e6eaef}
+
+.btn{padding:7px 18px;border:none;border-radius:5px;font-size:13px;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.btn-sm{padding:5px 12px;font-size:12px}
+.btn-xs{padding:3px 10px;font-size:12px}
+.btn-xxs{padding:0 3px;font-size:10px;line-height:1.5;min-width:18px;background:transparent;border:1px solid #ccc;border-radius:3px;cursor:pointer;color:#999;font-weight:400}
+.btn-xxs:hover{background:#fef0f0;border-color:#e4393c;color:#e4393c}
+.btn-primary{background:#1a4a74;color:#fff}
+.btn-primary:hover{background:#0a2a44}
+.btn-green{background:#2b8c5e;color:#fff}
+.btn-green:hover{background:#1e6b46}
+.btn-purple{background:#5b3d8a;color:#fff}
+.btn-purple:hover{background:#432d68}
+.btn-orange{background:#d97706;color:#fff}
+.btn-orange:hover{background:#b45309}
+.btn-outline{background:#fff;color:#1a4a74;border:1.5px solid #1a4a74}
+.btn-outline:hover{background:#eef4fa}
+.btn-outline-red{background:#fff;color:#e4393c;border:1.5px solid #e4393c}
+.btn-outline-red:hover{background:#fef0f0}
+.btn-danger{background:#ff4d4f;color:#fff;padding:2px 10px;font-size:12px}
+.btn-danger:hover{background:#cf1322}
+
+#errorMsg{text-align:center;font-size:14px;padding:6px;display:none}
+#errorMsg.show{display:block;color:#e4393c}
+
+.main-actions{display:flex;justify-content:center;gap:12px;margin-top:12px;flex-wrap:wrap}
+.samples-actions{display:flex;justify-content:center;gap:8px;margin:6px 0 10px;flex-wrap:wrap}
+
+.print-section{display:none}
+@page{size:A4 portrait;margin:2cm}
+@media print{
+  .no-print{display:none!important}
+  body{background:#fff!important;font-size:11px}
+  .app-container{max-width:100%;padding:0;margin:0}
+  .print-section{display:block!important}
+  .print-page{page-break-after:always}
+  .print-page:last-child{page-break-after:auto}
+  .print-page .pp-card .pp-body .pp-chart{min-height:30px}
+}
+.print-page{width:100%}
+.print-page .pp-title{text-align:center;font-size:20px;font-weight:700;letter-spacing:4px;margin-bottom:2px}
+.print-page .pp-sub{display:flex;justify-content:space-between;font-size:11px;border-bottom:1.5px solid #000;padding-bottom:1px;margin-bottom:2px}
+.print-page .pp-grid{display:grid;grid-template-columns:1fr;gap:3px}
+.print-page .pp-card{border:1px solid #999;border-radius:1px;padding:3px 5px;page-break-inside:avoid}
+.print-page .pp-card .pp-hdr{font-size:12px;font-weight:700;padding:0 0 1px 4px;margin-bottom:1px;border-bottom:1px solid #ccc}
+.print-page .pp-card .pp-body{display:flex;gap:3px}
+.print-page .pp-card .pp-body .pp-tab{flex:0 0 115px;font-size:10px}
+.print-page .pp-card .pp-body .pp-tab table{width:100%;border-collapse:collapse}
+.print-page .pp-card .pp-body .pp-tab td,.print-page .pp-card .pp-body .pp-tab th{border:1px solid #888;padding:1px 3px;text-align:center}
+.print-page .pp-card .pp-body .pp-tab th{background:#e8ecf0;font-weight:700}
+.print-page .pp-card .pp-body .pp-chart{flex:1;min-height:40px}
+.print-page .pp-card .pp-body .pp-chart img{width:100%;height:100%;object-fit:contain}
+.print-page .pp-card .pp-ind{display:flex;gap:2px;justify-content:center;margin-top:1px;flex-wrap:wrap;font-size:10px}
+.print-page .pp-card .pp-ind span{padding:1px 6px;background:#f0f2f5;border:1px solid #ddd;border-radius:2px}
+.print-page .pp-footer{display:flex;justify-content:space-between;font-size:11px;border-top:1.5px solid #000;padding-top:1px;margin-top:2px}
+
+@media(max-width:860px){
+  .sample-body .col-range,.sample-body .col-pass{flex:1 1 45%}
+  .sample-body .col-chart{flex:1 1 100%;min-height:280px}
+  .info-grid{grid-template-columns:1fr 1fr}
+  .top-banner h1{font-size:20px}
+}
+</style>
+</head>
+<body>
+<div class="app-container">
+  <div class="top-banner no-print">
+    <h1>颗粒分析成果图表</h1>
+    <span>土工颗粒分析曲线 · 自动生成</span>
+  </div>
+  <div class="card no-print">
+    <div class="card-title">工程信息</div>
+    <div class="info-grid">
+      <div class="info-item"><label>工程名称</label><input id="projName" value="XXX工程"></div>
+      <div class="info-item"><label>试验单位</label><input id="unitName" value="XXX勘察设计院"></div>
+      <div class="info-item"><label>试验者</label><input id="tester" value="张三"></div>
+      <div class="info-item"><label>检查者</label><input id="checker" value="李四"></div>
+      <div class="info-item"><label>试验日期</label><input id="testDate" type="date"></div>
+      <div class="info-item"><label>样品编号</label><input id="sampleNo" value="TG2024-001"></div>
+    </div>
+  </div>
+  <div class="card no-print">
+    <div class="card-title">颗粒组成数据录入</div>
+    <div class="samples-actions">
+      <button class="btn btn-outline btn-sm" onclick="addSample()">+ 添加试样</button>
+      <button class="btn btn-orange btn-sm" onclick="saveData()">保存数据</button>
+      <button class="btn btn-outline btn-sm" onclick="loadSaved()">恢复数据</button>
+      <button class="btn btn-outline-red btn-sm" onclick="clearAll()">清空</button>
+      <button class="btn btn-outline btn-sm" onclick="openPasteModal()">📋 从Excel粘贴</button>
+    </div>
+    <div id="samplesContainer"></div>
+    <div id="errorMsg"></div>
+    <div class="main-actions">
+      <button class="btn btn-green" onclick="generateAll()">生成曲线</button>
+      <button class="btn btn-purple" onclick="showPrintPreview()">打印预览</button>
+    </div>
+  </div>
+  <div class="print-section" id="printSection"></div>
+
+  <div class="overlay" id="pasteModal">
+    <div class="overlay-box">
+      <h3>从Excel粘贴数据</h3>
+      <p class="info">在Excel中选中一行或多行数据（含表头则需包含试样名称列），按 <b>Ctrl+C</b> 复制，然后粘贴到下方文本框：<br><span style="color:#999">每行为一个试样，列顺序：试样名称 / 100~60 / 60~20 / 20~5 / 5~2 / 2~0.5 / 0.5~0.25 / 0.25~0.075 / 0.075~0.005 / &lt;0.005</span></p>
+      <textarea id="pasteArea" placeholder="示例：
+试样A	0	5	12	18	25	20	12	6	2
+试样B	0	2	8	15	28	24	14	7	2"></textarea>
+      <div class="overlay-actions">
+        <button class="btn btn-outline" onclick="closePasteModal()">取消</button>
+        <button class="btn btn-green" onclick="applyPasteData()">确认导入</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var RANGES = [
+  {label:'100~60', from:60, to:100, sieve:60},
+  {label:'60~20', from:20, to:60, sieve:20},
+  {label:'20~5', from:5, to:20, sieve:5},
+  {label:'5~2', from:2, to:5, sieve:2},
+  {label:'2~0.5', from:0.5, to:2, sieve:0.5},
+  {label:'0.5~0.25', from:0.25, to:0.5, sieve:0.25},
+  {label:'0.25~0.075', from:0.075, to:0.25, sieve:0.075},
+  {label:'0.075~0.005', from:0.005, to:0.075, sieve:0.005},
+  {label:'<0.005', from:0, to:0.005, sieve:null}
+];
+var SIEVES = [100, 60, 20, 5, 2, 0.5, 0.25, 0.075, 0.005];
+var sampleCounter = 0;
+var chartInstances = {};
+var sampleColors = ['#e4393c','#096dd9','#2b8c5e','#e67e22','#8e44ad','#1abc9c','#16a085','#c0392b'];
+
+function cubicSplineInterp(x,y,tx){
+  var n=x.length;if(n===1)return tx.map(function(){return y[0]});
+  if(n===2)return tx.map(function(t){return y[0]+(y[1]-y[0])*(t-x[0])/(x[1]-x[0])});
+  var h=[];for(var i=0;i<n-1;i++)h.push(x[i+1]-x[i]);
+  var alpha=[0];for(var i=1;i<n-1;i++)alpha.push(3/h[i]*(y[i+1]-y[i])-3/h[i-1]*(y[i]-y[i-1]));
+  var l=[1],mu=[0],z=[0];
+  for(var i=1;i<n-1;i++){l.push(2*(x[i+1]-x[i-1])-h[i-1]*mu[i-1]);mu.push(h[i]/l[i]);z.push((alpha[i]-h[i-1]*z[i-1])/l[i]);}
+  l.push(1);z.push(0);
+  var c=new Array(n).fill(0),b=new Array(n-1),d=new Array(n-1);
+  for(var j=n-2;j>=0;j--){c[j]=z[j]-mu[j]*c[j+1];b[j]=(y[j+1]-y[j])/h[j]-h[j]*(c[j+1]+2*c[j])/3;d[j]=(c[j+1]-c[j])/(3*h[j]);}
+  var out=[];
+  for(var k=0;k<tx.length;k++){
+    var t=tx[k];if(t<=x[0]){out.push(y[0]);continue}if(t>=x[n-1]){out.push(y[n-1]);continue}
+    for(var i=0;i<n-1;i++){if(t>=x[i]&&t<=x[i+1])break}
+    var dx=t-x[i];out.push(y[i]+b[i]*dx+c[i]*dx*dx+d[i]*dx*dx*dx);
+  }
+  return out;
+}
+
+function buildCurveSegments(data,num){
+  if(data.length<2)return[];num=num||600;
+  var sorted=data.slice().sort(function(a,b){return a.sieve-b.sieve});
+  var segs=[];var cur=[sorted[0]];
+  for(var i=1;i<sorted.length;i++){
+    var pi=SIEVES.indexOf(sorted[i-1].sieve);
+    var ci=SIEVES.indexOf(sorted[i].sieve);
+    if(pi===ci+1){cur.push(sorted[i]);}
+    else{segs.push(cur);cur=[sorted[i]];}
+  }
+  segs.push(cur);
+  var out=[];
+  segs.forEach(function(seg){
+    if(seg.length<2)return;
+    var logX=seg.map(function(d){return Math.log10(d.sieve)});
+    var y=seg.map(function(d){return d.pct});
+    var segMaxLog=Math.max.apply(null,logX);
+    var segMinLog=Math.min.apply(null,logX);
+    var step=(segMinLog-segMaxLog)/(num-1);
+    var tLog=[];for(var i=0;i<num;i++)tLog.push(segMaxLog+i*step);
+    var iy=cubicSplineInterp(logX,y,tLog);
+    var pts=[];for(var i=0;i<tLog.length;i++){var v=Math.max(0,Math.min(100,iy[i]));pts.push([Math.pow(10,tLog[i]),v]);}
+    out.push(pts);
+  });
+  return out;
+}
+
+function calcPassingFromRanges(sid){
+  var vals={};var total=0;
+  RANGES.forEach(function(r,idx){
+    var row=document.getElementById('rng-row-'+sid+'-'+idx);
+    if(row&&row.classList.contains('deleted')){vals[r.label]=0;return;}
+    var el=document.getElementById('rng-'+sid+'-'+idx);if(!el)return;
+    var v=parseFloat(el.value)||0;vals[r.label]=v;total+=v;
+  });
+  var sieveVals={};var cum=100;
+  sieveVals[100]=100;
+  RANGES.forEach(function(r,idx){
+    var row=document.getElementById('rng-row-'+sid+'-'+idx);
+    if(row&&row.classList.contains('deleted'))return;
+    if(r.sieve!==null){cum-=vals[r.label]||0;sieveVals[r.sieve]=Math.max(0,cum);}
+  });
+  sieveVals[0.005]=Math.max(0,cum-(vals['<0.005']||0));
+  return {sieveVals:sieveVals,total:total,vals:vals};
+}
+
+function getSampleName(sid){
+  var el=document.getElementById('sn-'+sid);
+  return el?el.value||('试样'+(sid+1)):'试样'+(sid+1);
+}
+
+function isSampleChecked(sid){
+  var el=document.getElementById('chk-'+sid);
+  return el?el.checked:true;
+}
+
+function toggleRangeDelete(sid,idx){
+  var row=document.getElementById('rng-row-'+sid+'-'+idx);
+  if(!row)return;row.classList.toggle('deleted');
+  var input=document.getElementById('rng-'+sid+'-'+idx);
+  if(row.classList.contains('deleted')){input.dataset.orig=input.value;input.disabled=true;input.value=0;}
+  else{input.disabled=false;input.value=input.dataset.orig||'';}
+  updatePassing(sid);
+  generateOne(sid);
+}
+
+function toggleSieveDelete(sid,s){
+  var row=document.getElementById('pv-row-'+sid+'-'+s);
+  if(!row)return;row.classList.toggle('deleted');
+  generateOne(sid);
+}
+
+function handleRangeKeydown(e,sid,idx){
+  if(e.key==='ArrowDown'||e.key==='Enter'){
+    e.preventDefault();
+    var next=document.getElementById('rng-'+sid+'-'+(idx+1));
+    if(next){next.focus();next.select();}
+  }else if(e.key==='ArrowUp'){
+    e.preventDefault();
+    var prev=document.getElementById('rng-'+sid+'-'+(idx-1));
+    if(prev){prev.focus();prev.select();}
+  }
+}
+
+function openPasteModal(){
+  document.getElementById('pasteModal').classList.add('show');
+  document.getElementById('pasteArea').value='';document.getElementById('pasteArea').focus();
+}
+
+function closePasteModal(){
+  document.getElementById('pasteModal').classList.remove('show');
+}
+
+function applyPasteData(){
+  var text=document.getElementById('pasteArea').value.trim();
+  if(!text)return;var lines=text.split('\n');var count=0;
+  lines.forEach(function(line){
+    line=line.trim();if(!line)return;
+    var parts=line.split('\t');if(parts.length<2)return;
+    var first=parseFloat(parts[0]);var name,values;
+    if(isNaN(first)){name=parts[0];values=parts.slice(1);}
+    else{name='试样'+(sampleCounter+1);values=parts;}
+    var contents=[];for(var i=0;i<9;i++)contents.push(i<values.length?values[i]:'');
+    addSample({name:name,contents:contents});count++;
+  });
+  closePasteModal();if(count>0){generateAll();}
+}
+
+function addSample(savedData){
+  var sid=sampleCounter++;var color=sampleColors[sid%sampleColors.length];
+  var dName=savedData&&savedData.name?savedData.name:'试样'+(sid+1);
+  var checked=(!savedData||savedData.printChecked===undefined||savedData.printChecked);
+  var container=document.getElementById('samplesContainer');
+  var card=document.createElement('div');card.className='sample-card';card.id='sc-'+sid;
+
+  var rangeRows='';
+  RANGES.forEach(function(r,idx){
+    var val=savedData&&savedData.contents&&savedData.contents[idx]!==undefined?savedData.contents[idx]:'';
+    rangeRows+='<tr id="rng-row-'+sid+'-'+idx+'"><td>'+r.label+'</td><td><input id="rng-'+sid+'-'+idx+'" type="number" step="any" value="'+val+'" oninput="updatePassing('+sid+')" onkeydown="handleRangeKeydown(event,'+sid+','+idx+')"></td><td><button class="btn-xxs" onclick="toggleRangeDelete('+sid+','+idx+')">✕</button></td></tr>';
+  });
+  rangeRows+='<tr class="sum-row"><td>合计</td><td id="sum-'+sid+'">0</td><td></td></tr>';
+
+  var passRows='';
+  SIEVES.forEach(function(s){
+    passRows+='<tr id="pv-row-'+sid+'-'+s+'"><td>'+s+'</td><td class="pass-val" id="pv-'+sid+'-'+s+'">-</td><td><button class="btn-xxs" onclick="toggleSieveDelete('+sid+','+s+')">✕</button></td></tr>';
+  });
+
+  card.innerHTML=
+    '<div class="sample-header">'+
+      '<div class="left">'+
+        '<input type="checkbox" id="chk-'+sid+'" '+(checked?'checked':'')+'>'+
+        '<input id="sn-'+sid+'" value="'+dName+'" placeholder="试样名称" style="border-left:3px solid '+color+';padding-left:8px">'+
+        '<label for="chk-'+sid+'" style="font-size:12px;color:#888">打印</label>'+
+      '</div>'+
+      '<button class="btn btn-danger btn-sm" onclick="removeSample('+sid+')">删除</button>'+
+    '</div>'+
+    '<div class="sample-body">'+
+      '<div class="col-range">'+
+        '<div style="font-size:13px;font-weight:600;color:#555;margin-bottom:4px">粒组含量</div>'+
+        '<table class="static-table"><thead><tr><th>粒径范围(mm)</th><th>含量(%)</th><th style="width:22px"></th></tr></thead><tbody>'+rangeRows+'</tbody></table>'+
+      '</div>'+
+      '<div class="col-pass">'+
+        '<div style="font-size:13px;font-weight:600;color:#555;margin-bottom:4px">通过率</div>'+
+        '<table class="static-table"><thead><tr><th>孔径(mm)</th><th>通过率(%)</th><th style="width:22px"></th></tr></thead><tbody>'+passRows+'</tbody></table>'+
+      '</div>'+
+      '<div class="col-chart" style="border-left:3px solid '+color+'">'+
+        '<div class="chart-instance" id="ci-'+sid+'"></div>'+
+        '<div class="indicator-box" id="ind-'+sid+'"></div>'+
+      '</div>'+
+    '</div>';
+  container.appendChild(card);
+
+  if(savedData){
+    if(savedData.deletedRanges)savedData.deletedRanges.forEach(function(idx){var row=document.getElementById('rng-row-'+sid+'-'+idx);if(row){row.classList.add('deleted');var inp=document.getElementById('rng-'+sid+'-'+idx);if(inp){inp.disabled=true;inp.dataset.orig=inp.value;inp.value=0;}}});
+    if(savedData.deletedSieved)savedData.deletedSieved.forEach(function(s){var row=document.getElementById('pv-row-'+sid+'-'+s);if(row)row.classList.add('deleted');});
+    if(savedData.contents)updatePassing(sid);
+  }
+  return sid;
+}
+
+function removeSample(sid){
+  if(chartInstances[sid]){chartInstances[sid].dispose();delete chartInstances[sid];}
+  var el=document.getElementById('sc-'+sid);if(el)el.remove();
+}
+
+function updatePassing(sid){
+  var result=calcPassingFromRanges(sid);
+  document.getElementById('sum-'+sid).textContent=result.total.toFixed(1);
+  SIEVES.forEach(function(s){
+    var el=document.getElementById('pv-'+sid+'-'+s);
+    if(el)el.textContent=result.sieveVals[s]!==undefined?result.sieveVals[s].toFixed(1):'-';
+  });
+}
+
+function collectData(sid){
+  var result=calcPassingFromRanges(sid);
+  var data=[];
+  SIEVES.forEach(function(s){
+    var row=document.getElementById('pv-row-'+sid+'-'+s);
+    if(row&&row.classList.contains('deleted'))return;
+    if(result.sieveVals[s]!==undefined&&result.sieveVals[s]>=0)data.push({sieve:s,pct:result.sieveVals[s]});
+  });
+  return data;
+}
+
+function generateOne(sid){
+  var data=collectData(sid);if(data.length<2)return;
+  var segs=buildCurveSegments(data,300);var color=sampleColors[sid%sampleColors.length];var name=getSampleName(sid);
+  if(chartInstances[sid]){chartInstances[sid].dispose();}
+  chartInstances[sid]=renderChart('ci-'+sid,segs,data,color,name);
+  updateIndicators(sid,data);
+}
+
+function generateAll(){
+  var err=document.getElementById('errorMsg');err.classList.remove('show');
+  var cards=document.querySelectorAll('.sample-card');var any=false;
+  cards.forEach(function(c){
+    var id=parseInt(c.id.replace('sc-',''));updatePassing(id);
+    var data=collectData(id);if(data.length>=2){any=true;generateOne(id);}
+  });
+  if(!any){
+    if(cards.length===0){err.textContent='请先添加试样并输入数据';err.classList.add('show');}
+    else{err.textContent='请检查粒组合计是否为100%';err.classList.add('show');}
+  }
+}
+
+function calcIndicators(data){
+  if(!data||data.length<2)return null;
+  function getPctAt(sieve){
+    var sorted=data.slice().sort(function(a,b){return a.sieve-b.sieve});
+    var logX=sorted.map(function(d){return Math.log10(d.sieve)});
+    var y=sorted.map(function(d){return d.pct});
+    var iv=cubicSplineInterp(logX,y,[Math.log10(sieve)]);return iv[0];
+  }
+  function findD(pct){
+    var cand=[];for(var i=0;i<500;i++){var logV=-3+(2-(-3))*i/499;var v=Math.pow(10,logV);var p=getPctAt(v);if(p!==null)cand.push({sieve:v,pct:p});}
+    var best=cand[0];for(var i=1;i<cand.length;i++){if(Math.abs(cand[i].pct-pct)<Math.abs(best.pct-pct))best=cand[i];}
+    return best.sieve;
+  }
+  var d10=findD(10),d30=findD(30),d60=findD(60);
+  return{d10:d10,d30:d30,d60:d60,Cu:d60/d10,Cc:d30*d30/(d10*d60)};
+}
+
+function renderChart(containerId,segments,rawData,lineColor,seriesName){
+  var dom=document.getElementById(containerId);if(!dom)return null;
+  var chart=echarts.init(dom,null,{renderer:'canvas',devicePixelRatio:2});
+  var series=[];
+  segments.forEach(function(seg){
+    if(seg&&seg.length>0)series.push({name:seriesName,type:'line',data:seg,smooth:true,symbol:'none',lineStyle:{width:2.5,color:lineColor},animation:false});
+  });
+  var scData=(rawData||[]).map(function(d){return[d.sieve,d.pct]});
+  if(scData.length>0){
+    series.push({name:seriesName,type:'scatter',data:scData,symbol:'circle',symbolSize:10,itemStyle:{color:lineColor,borderColor:'#fff',borderWidth:2.5},animation:false});
+  }
+  chart.setOption({
+    tooltip:{trigger:'axis',confine:true,formatter:function(p){if(!p||!p.length)return'';var d=p[0];return'<b>'+d.axisValueLabel+' mm</b><br/>'+d.marker+' '+seriesName+'：<b>'+(d.value[1]!==undefined?d.value[1].toFixed(1):'')+'</b>%';}},
+    grid:{left:80,right:22,top:18,bottom:52},
+    xAxis:{type:'log',logBase:10,min:0.001,max:100,inverse:true,name:'粒径 (mm)',nameLocation:'middle',nameGap:24,nameTextStyle:{fontSize:16,fontWeight:'bold',padding:[0,0,0,0]},axisLabel:{showMinLabel:true,showMaxLabel:true,formatter:function(v){if(v>=1)return v>=10?''+v:''+v;if(v>=0.1)return v.toFixed(1);if(v>=0.01)return v.toFixed(2);if(v>=0.001)return '0.001';return''+v;},fontSize:14},splitLine:{show:true,lineStyle:{type:'dashed',color:'#e8e8e8'}},axisLine:{lineStyle:{color:'#444'}},minorTick:{show:true,splitNumber:9},minorSplitLine:{show:true,lineStyle:{type:'dotted',color:'#f0f0f0'}}},
+    yAxis:{type:'value',min:0,max:100,interval:10,name:'小于某粒径的土重含量(%)',nameLocation:'middle',nameGap:40,nameTextStyle:{fontSize:16,fontWeight:'bold',padding:[0,0,0,10]},axisLabel:{formatter:'{value}',fontSize:14},splitLine:{show:true,lineStyle:{type:'dashed',color:'#d0d0d0'}},axisLine:{lineStyle:{color:'#444'}}},
+    series:series
+  });
+  return chart;
+}
+
+function updateIndicators(sid,data){
+  var ind=calcIndicators(data);if(!ind)return;
+  document.getElementById('ind-'+sid).innerHTML=
+    '<span>d₁₀='+ind.d10.toFixed(3)+'mm</span><span>d₃₀='+ind.d30.toFixed(3)+'mm</span><span>d₆₀='+ind.d60.toFixed(3)+'mm</span><span>Cu='+ind.Cu.toFixed(2)+'</span><span>Cc='+ind.Cc.toFixed(2)+'</span><span>级配：'+(ind.Cu>=5&&ind.Cc>=1&&ind.Cc<=3?'良好':'不良')+'</span>';
+}
+
+// ===== 打印预览（每页3个结果，纵向排布）=====
+function buildPrintPages(){
+  generateAll();
+  var pn=document.getElementById('projName').value||'';var un=document.getElementById('unitName').value||'';
+  var dv=document.getElementById('testDate').value||'__________';
+  var tester=document.getElementById('tester').value||'__________';
+  var checker=document.getElementById('checker').value||'__________';
+
+  var selected=[];
+  document.querySelectorAll('.sample-card').forEach(function(c){
+    var id=parseInt(c.id.replace('sc-',''));
+    if(!isSampleChecked(id))return;
+    var data=collectData(id);if(data.length<2)return;
+    selected.push({id:id,data:data});
+  });
+
+  var section=document.getElementById('printSection');
+  section.innerHTML='';
+  if(selected.length===0){alert('请至少勾选一个试样（点击试样名称旁的复选框）');return;}
+
+  var pages=Math.ceil(selected.length/3);
+  for(var p=0;p<pages;p++){
+    var pageDiv=document.createElement('div');
+    pageDiv.className='print-page';
+    var pageHtml=
+      '<div class="pp-title">颗粒分析成果图表</div>'+
+      '<div class="pp-sub"><span>工程名称：'+pn+'</span><span>试验单位：'+un+'</span><span>日期：'+dv+'</span></div>'+
+      '<div class="pp-grid" id="ppGrid-'+p+'"></div>';
+    if(p===0)pageHtml+='<div class="pp-footer"><span>试验者：'+tester+'</span><span>检查者：'+checker+'</span><span>试验日期：'+dv+'</span></div>';
+    pageDiv.innerHTML=pageHtml;
+    section.appendChild(pageDiv);
+
+    var grid=document.getElementById('ppGrid-'+p);
+    for(var i=0;i<3;i++){
+      var idx=p*3+i;
+      if(idx>=selected.length)break;
+      var s=selected[idx];
+      var name=getSampleName(s.id);var color=sampleColors[s.id%sampleColors.length];
+      var sorted=s.data.slice().sort(function(a,b){return b.sieve-a.sieve;});
+      var th='<table><tr><th>孔径(mm)</th><th>通过率(%)</th></tr>';
+      sorted.forEach(function(d){
+        var row=document.getElementById('pv-row-'+s.id+'-'+d.sieve);
+        var isDel=row&&row.classList.contains('deleted');
+        th+='<tr'+(isDel?' style="opacity:0.3;text-decoration:line-through"':'')+'><td>'+d.sieve+'</td><td>'+(isDel?'—':d.pct.toFixed(1))+'</td></tr>';
+      });th+='</table>';
+
+      var rangeHtml='<table><tr><th>粒径(mm)</th><th>含量(%)</th></tr>';
+      RANGES.forEach(function(r,ri){
+        var row=document.getElementById('rng-row-'+s.id+'-'+ri);
+        var isDel=row&&row.classList.contains('deleted');
+        var el=document.getElementById('rng-'+s.id+'-'+ri);
+        var v=el?parseFloat(el.value)||0:0;
+        rangeHtml+='<tr'+(isDel?' style="opacity:0.3;text-decoration:line-through"':'')+'><td>'+r.label+'</td><td>'+(isDel?'—':v.toFixed(1))+'</td></tr>';
+      });rangeHtml+='</table>';
+
+      var ind=calcIndicators(s.data);var indHtml='';
+      if(ind)indHtml='d₁₀='+ind.d10.toFixed(3)+' d₃₀='+ind.d30.toFixed(3)+' d₆₀='+ind.d60.toFixed(3)+' Cu='+ind.Cu.toFixed(2)+' Cc='+ind.Cc.toFixed(2)+' 级配：'+(ind.Cu>=5&&ind.Cc>=1&&ind.Cc<=3?'良好':'不良');
+
+      var card=document.createElement('div');card.className='pp-card';
+      card.innerHTML=
+        '<div class="pp-hdr" style="border-left:3px solid '+color+';padding-left:4px">'+name+'</div>'+
+        '<div class="pp-body">'+
+          '<div class="pp-tab">'+rangeHtml+'</div>'+
+          '<div class="pp-tab">'+th+'</div>'+
+          '<div class="pp-chart" id="ppc-'+s.id+'-'+p+'"></div>'+
+        '</div>'+
+        '<div class="pp-ind"><span>'+indHtml+'</span></div>';
+      grid.appendChild(card);
+    }
+    var remaining=3-(selected.length-p*3);
+    if(remaining>0&&remaining<3){for(var j=0;j<remaining;j++){var dummy=document.createElement('div');dummy.style.cssText='border:1px solid transparent';grid.appendChild(dummy);}}
+  }
+
+  setTimeout(function(){
+    selected.forEach(function(s){
+      var chart=chartInstances[s.id];
+      if(chart){
+        var url=chart.getDataURL({type:'png',pixelRatio:3,backgroundColor:'#fff'});
+        var boxes=document.querySelectorAll('[id^="ppc-'+s.id+'-"]');
+        boxes.forEach(function(box){
+          var img=document.createElement('img');img.src=url;
+          img.style.cssText='width:100%;height:100%;object-fit:contain';
+          box.appendChild(img);
+        });
+      }
+    });
+    setTimeout(function(){window.print();},300);
+  },500);
+}
+
+function showPrintPreview(){
+  buildPrintPages();
+}
+
+// ===== 保存/恢复 =====
+function collectAllData(){
+  var result=[];
+  document.querySelectorAll('.sample-card').forEach(function(c){
+    var id=parseInt(c.id.replace('sc-',''));var name=getSampleName(id);var contents=[];var deletedRanges=[];var deletedSieved=[];
+    RANGES.forEach(function(r,idx){
+      var el=document.getElementById('rng-'+id+'-'+idx);contents.push(el?el.value:'');
+      var row=document.getElementById('rng-row-'+id+'-'+idx);
+      if(row&&row.classList.contains('deleted'))deletedRanges.push(idx);
+    });
+    SIEVES.forEach(function(s){
+      var row=document.getElementById('pv-row-'+id+'-'+s);
+      if(row&&row.classList.contains('deleted'))deletedSieved.push(s);
+    });
+    result.push({name:name,contents:contents,printChecked:isSampleChecked(id),deletedRanges:deletedRanges,deletedSieved:deletedSieved});
+  });
+  return result;
+}
+
+function saveData(){
+  var data={projName:document.getElementById('projName').value,unitName:document.getElementById('unitName').value,tester:document.getElementById('tester').value,checker:document.getElementById('checker').value,testDate:document.getElementById('testDate').value,sampleNo:document.getElementById('sampleNo').value,samples:collectAllData()};
+  try{localStorage.setItem('grainAnalysisData',JSON.stringify(data));}catch(e){}
+  var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='颗粒分析成果数据.json';document.body.appendChild(a);a.click();
+  document.body.removeChild(a);URL.revokeObjectURL(a.href);
+  alert('数据已保存（含工程信息）！');
+}
+
+function loadSaved(){
+  try{
+    var raw=localStorage.getItem('grainAnalysisData');if(!raw){alert('没有已保存的数据');return;}
+    var data=JSON.parse(raw);clearAll();
+    if(data.projName)document.getElementById('projName').value=data.projName;
+    if(data.unitName)document.getElementById('unitName').value=data.unitName;
+    if(data.tester)document.getElementById('tester').value=data.tester;
+    if(data.checker)document.getElementById('checker').value=data.checker;
+    if(data.testDate)document.getElementById('testDate').value=data.testDate;
+    if(data.sampleNo)document.getElementById('sampleNo').value=data.sampleNo;
+    if(data.samples)data.samples.forEach(function(s){addSample(s);});
+    generateAll();
+    alert('数据已恢复！');
+  }catch(e){alert('恢复失败：'+e.message);}
+}
+
+function clearAll(){
+  Object.keys(chartInstances).forEach(function(k){chartInstances[k].dispose();delete chartInstances[k];});
+  document.getElementById('samplesContainer').innerHTML='';sampleCounter=0;document.getElementById('printSection').innerHTML='';
+}
+
+var SAMPLE_VALUES={
+  1:{a:[0,5,12,18,25,20,12,6,2],b:[0,2,8,15,28,24,14,7,2]},
+  2:{a:[0,8,15,22,20,15,12,6,2],b:[0,3,10,18,25,20,14,8,2]},
+  3:{a:[0,10,18,25,22,12,8,4,1],b:[0,5,12,20,25,18,12,6,2]}
+};
+
+function loadSample(idx){
+  clearAll();var s=SAMPLE_VALUES[idx];if(!s)return;
+  addSample({name:'试样A',contents:s.a});
+  addSample({name:'试样B',contents:s.b});
+  generateAll();
+}
+
+window.addEventListener('resize',function(){Object.keys(chartInstances).forEach(function(k){if(chartInstances[k])chartInstances[k].resize();});});
+
+(function init(){
+  var t=new Date();document.getElementById('testDate').value=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
+  try{var raw=localStorage.getItem('grainAnalysisData');if(raw){var d=JSON.parse(raw);if(d.samples&&d.samples.length>0){loadSaved();return;}}}catch(e){}
+  loadSample(1);
+})();
+</script>
+</body>
+</html>
